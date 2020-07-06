@@ -32,17 +32,55 @@
 %> @retval Modified fds structure
 %
 function [ fds ] = kVIS_fdsRemoveTreeLeaf(fds, label)
+% Currently only works if the name of the leaf node is unique...
+
+if ~nargin
+    remove_leaf_test;
+    return
+end
 
 % Index groups with matching names
 idx = strcmp(label,fds.fdata(fds.fdataRows.groupLabel,:));
+loc = find(idx==1);
 
 if max(idx) == 0
     % Group not found, do nothing
-    fprintf('Group << %s >> not found in fds\n',label)
-else
-    % Update fdata without the indexed groups
-    fds.fdata = fds.fdata(:,~idx);
+    fprintf('Group << %s >> not found in fds\n',label);
+    
+    % do nothing
+    return
 end
 
+% Check to see if we're removing a leaf or entire branch
+if (isempty(fds.fdata(7,loc)))
+    fprintf('Removing BRANCH << %s >> at index %d\n',label,loc)
+    
+    % Go through and recursively remove the children of BRANCH
+    keyboard
+    
+    fds = kVIS_fdsRemoveTreeLeaf(fds, label);
+    
+    return
+else
+    fprintf('Removing LEAF << %s >> at index %d\n',label,loc)
+    
+    % Remove the data
+    fds.fdata = fds.fdata(:,~idx);
+    
+    % Fix the parent indexing of the items below loc
+    if (loc < size(fds.fdata,2))
+        for ii = loc:size(fds.fdata,2)
+            if (fds.fdata{8,ii} > loc)
+                fds.fdata{8,ii} = fds.fdata{8,ii}-1;
+                fprintf('\t%3d - Parent index adjusted\n',ii);
+            end
+        end
+    end
+
+    % LEAF should be removed
+end
+
+% File processed
 return;
+
 end
